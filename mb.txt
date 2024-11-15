@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>挪车小助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size:42px;
+        }
+        .notification-count {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #007bff;
+        }
+        .message-area {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: none;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .char-count {
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .templates {
+            margin-bottom: 20px;
+        }
+        .template-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px 15px;
+            margin: 0 5px 5px 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .template-btn:hover { background: #e9ecef; }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .notify-btn {
+            background: linear-gradient(45deg, #00b09b, #96c93d);
+	    color: white;
+        }
+        .notify-btn:hover { 
+	    box-shadow: 0 6px 20px rgba(0, 176, 155, 0.3);
+            transform: translateY(-2px); }
+        .call-btn {  
+	    background: linear-gradient(45deg, #5370e6, #8558e9);
+            color: white;
+	    display: none; } /* 默认隐藏拨打电话按钮 */
+        .call-btn:hover {
+	     box-shadow: 0 6px 20px rgba(71, 118, 230, 0.3);
+            transform: translateY(-2px);}
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { position: relative; background-color: white; margin: 20% auto; padding: 20px; width: 90%; max-width: 400px; border-radius: 10px; text-align: center; }
+        .modal-title { margin-bottom: 15px; font-size: 18px; color: #2c3e50; }
+        .modal-phone { font-size: 24px; color: #007bff; margin-bottom: 20px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+        .modal-btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: all 0.3s ease; }
+        .confirm-btn { background: #28a745; color: white; }
+        .confirm-btn:hover { background: #218838; }
+        .cancel-btn { background: #dc3545; color: white; }
+        .cancel-btn:hover { background: #c82333; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>扫码挪车小程序</h1>
+	<h3 align="center">非常抱歉，阻碍到您的出行了！<h3>
+	<h3 align="center">请点击下方按钮通知车主挪车！<h3>
+    <div class="notification-count" id="notificationCountDisplay">已发送通知次数：0/3</div> <!-- 显示发送次数 -->
+    <div class="message-area">
+        <textarea id="messageInput" placeholder="请输入通知内容" oninput="updateCharCount()"></textarea>
+        <div id="charCount" class="char-count">0/200字</div>
+    </div>
+    <div class="templates">
+        <button class="template-btn" onclick="useTemplate('您好，有人需要您挪车，请及时处理。')">默认</button>
+        <button class="template-btn" onclick="useTemplate('您好，您的车辆阻碍他人通行，请尽快挪车，谢谢配合。')">礼貌模板</button>
+        <button class="template-btn" onclick="useTemplate('紧急情况！您的车辆阻碍消防通道，请立即挪车！')">紧急模板</button>
+        <button class="template-btn" onclick="useTemplate('您的车辆停放时未完全关闭车窗。为避免雨水进入车内或丢失物品，请尽快检查并关闭车窗！')">关窗提醒</button>
+    </div>
+    <div class="action-buttons">
+        <button id="notifyBtn" class="btn notify-btn" onclick="notifyOwner()">微信一键通知车主📱</button>
+        <button id="callBtn" class="btn call-btn" onclick="showCallModal()">一键拨打车主电话📞</button> <!-- 默认隐藏拨打电话按钮 -->
+    </div>
+</div>
+<!-- 模态框 -->
+<div id="callModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title">车主电话号码</div>
+        <div id="phoneNumber" class="modal-phone"></div> <!-- 电话号码将动态设置 -->
+        <div class="modal-buttons">
+            <button class="modal-btn confirm-btn" onclick="callOwner()">呼叫</button>
+            <button class="modal-btn cancel-btn" onclick="closeModal()">取消</button>
+        </div>
+    </div>
+</div>
+<script>
+  // 配置车主信息和 Wxpusher API
+  const phone = '15665410590';  // 车主的手机号
+  const wxpusherAppToken = 'AT_FggIqEWlvf7Nuw0SM8G9M1A1zzq2yn2o'; // Wxpusher APP Token
+  const wxpusherUIDs = ['UID_10gq26e5DEdsMIjlHFuPNW3dAmD9']; // 车主的UID数组
+  const forbiddenWords = [
+	"操你",
+	"你妈",
+	"你他妈",
+	"妈的",
+    "去死",
+    "死",
+    "傻逼",
+    "畜生",
+    "猪",
+    "狗",
+    "垃圾",
+    "有病",
+    "神经病",
+    "乡里别",
+    "恶心",
+    "闭嘴",
+    "别废话",
+    "广告",       // 广告相关词汇
+    "推广",       // 广告相关词汇
+    "优惠",       // 广告相关词汇
+    "免费",       // 广告相关词汇
+    "点击",       // 广告相关词汇
+    "注册",       // 广告相关词汇
+    "赚钱",       // 广告相关词汇
+    "代理",       // 广告相关词汇
+    "转发",       // 广告相关词汇
+    "信息",       // 广告相关词汇
+    "活动",       // 广告相关词汇
+    "购买",       // 广告相关词汇
+    "服务",       // 广告相关词汇
+    "宣传",       // 广告相关词汇
+    "营销",       // 广告相关词汇
+    "网站",       // 广告相关词汇
+    "链接",       // 广告相关词汇
+    "折扣",       // 与折扣相关的词汇
+    "特价",       // 与折扣相关的词汇
+    "优惠券",     // 与折扣相关的词汇
+    "促销",       // 与折扣相关的词汇
+    "打折",       // 与折扣相关的词汇
+    "保单",       // 与保险相关的词汇
+    "理赔",       // 与保险相关的词汇
+    "投保",       // 与保险相关的词汇
+    "保险公司",   // 与保险相关的词汇
+    "车险",       // 与保险相关的词汇
+    "意外险",     // 与保险相关的词汇
+    "医疗险"      // 与保险相关的词汇
+	]; // 违禁词列表
+    let notificationCount = 0; // 通知发送次数
+    let lastNotificationTime = 0; // 上次通知时间
+    const cooldownTime = 30000; // 30秒冷却时间
+
+    // 更新字符数
+    function updateCharCount() {
+        const message = document.getElementById("messageInput").value;
+        const count = message.length;
+        document.getElementById("charCount").textContent = `${count}/200字`;
+    };
+
+    // 使用快捷模板
+    function useTemplate(template) {
+        document.getElementById("messageInput").value = template;
+        updateCharCount();
+    };
+
+    // 检查违禁词
+    function containsForbiddenWords(message) {
+        return forbiddenWords.some(word => message.includes(word));
+    };
+
+    // 发送通知
+    function notifyOwner() {
+        const message = document.getElementById("messageInput").value;
+        // 违禁词检查
+        if (containsForbiddenWords(message)) {
+            alert("通知内容包含违禁词，无法发送");
+            return;
+        }
+        // 通知发送频率限制
+        const currentTime = new Date().getTime();
+        if (currentTime - lastNotificationTime < cooldownTime) {
+            const remainingTime = Math.ceil((cooldownTime - (currentTime - lastNotificationTime)) / 1000);
+            alert(`请等待 ${remainingTime} 秒后再发送通知。`);
+            return;
+        }
+        
+	lastNotificationTime = currentTime;
+        notificationCount++;
+
+        // 更新发送次数显示
+        document.getElementById("notificationCountDisplay").textContent = `已发送通知次数：${notificationCount}/3`;
+
+        // 发送通知逻辑
+        fetch("https://wxpusher.zjiecode.com/api/send/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                appToken: wxpusherAppToken,
+                content: message,
+                contentType: 1,
+                uids: wxpusherUIDs
+            })
+        })
+ .then(response => response.json())
+    .then(data => {
+      if (data.code === 1000) {
+        alert("通知已送达，请耐心等待。");
+	document.getElementById("messageInput").value = '';
+        updateCharCount();
+      } else {
+        alert("通知发送失败，请输入通知内容。");
+	document.getElementById("messageInput").value = '';
+        updateCharCount();
+      }
+    })
+    .catch(error => {
+      console.error("Error sending notification:", error);
+      alert("通知发送出错，请检查网络连接。");
+      document.getElementById("messageInput").value = '';
+      updateCharCount();
+    });
+        // 检查是否达到显示电话号码的条件
+        if (notificationCount >= 3) {
+	    document.getElementById("notifyBtn").style.display = "none"; // 达到指定次数后隐藏发送信息按钮
+            document.getElementById("callBtn").style.display = "block"; // 发送通知后显示拨打电话按钮
+        }
+    };
+
+    // 显示电话模态框
+    function showCallModal() {
+        document.getElementById("callModal").style.display = "block";
+        document.getElementById("phoneNumber").textContent = '号码显示已加密'; // 在模态框中显示电话号码
+    };
+
+    // 拨打电话
+    function callOwner() {
+        window.location.href = `tel:${phone}`;
+    };
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById("callModal").style.display = "none";
+    };
+	
+// 对浏览器的UserAgent进行正则匹配，不含有微信独有标识的则为其他浏览器
+    var useragent = navigator.userAgent;
+    if (useragent.match(/MicroMessenger/i) != 'MicroMessenger') {
+        // 这里警告框会阻塞当前页面继续加载
+        alert('已禁止本次访问：您必须使用微信扫描二维码访问本页面！');
+        // 以下代码是用javascript强行关闭当前页面
+        var opened = window.open('about:blank', '_self');
+        opened.opener = null;
+        opened.close();
+    };
+
+//隐藏弹窗网址
+(function(){
+window.alert = function(name){
+var iframe = document.createElement("IFRAME");
+iframe.style.display="none";
+iframe.setAttribute("src", 'data:text/plain');
+document.documentElement.appendChild(iframe);
+window.frames[0].window.alert(name);
+iframe.parentNode.removeChild(iframe);
+}
+})();
+</script>
+</body>
+</html>
