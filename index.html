@@ -143,10 +143,11 @@
   const wxpusherAppToken = 'AT_FggIqEWlvf7Nuw0SM8G9M1A1zzq2yn2o'; // Wxpusher APP Token
   const wxpusherUIDs = ['UID_10gq26e5DEdsMIjlHFuPNW3dAmD9']; // 车主的UID数组
   const forbiddenWords = [
-	"操你",
-	"你妈",
-	"你他妈",
-	"妈的",
+   "操你",
+   "操你妈",
+   "你妈",
+   "你他妈",
+   "妈的",
     "去死",
     "死",
     "傻逼",
@@ -190,9 +191,19 @@
     "意外险",     // 与保险相关的词汇
     "医疗险"      // 与保险相关的词汇
 	]; // 违禁词列表
-    let notificationCount = 0; // 通知发送次数
-    let lastNotificationTime = 0; // 上次通知时间
-    const cooldownTime = 30000; // 30秒冷却时间
+    const maxNotificationsPerDay = 3; // 24小时内最多发送通知次数
+    const cooldownTime = 10 * 1000; // 45秒冷却时间
+
+
+    // 获取本地存储的发送次数和时间戳
+    let notificationCount = parseInt(localStorage.getItem('notificationCount')) || 0;
+    let lastNotificationTime = parseInt(localStorage.getItem('lastNotificationTime')) || 0;
+
+    // 更新发送次数显示
+    function updateNotificationCountDisplay() {
+        const displayElement = document.getElementById("notificationCountDisplay");
+        displayElement.textContent = `已发送通知次数：${notificationCount}/${maxNotificationsPerDay}`;
+    }
 
     // 更新字符数
     function updateCharCount() {
@@ -227,13 +238,13 @@
             alert(`请等待 ${remainingTime} 秒后再发送通知。`);
             return;
         }
-        
-	lastNotificationTime = currentTime;
+        // 更新发送次数和时间戳
         notificationCount++;
-
+        lastNotificationTime = currentTime;
+        localStorage.setItem('notificationCount', notificationCount);
+        localStorage.setItem('lastNotificationTime', lastNotificationTime);
         // 更新发送次数显示
-        document.getElementById("notificationCountDisplay").textContent = `已发送通知次数：${notificationCount}/3`;
-
+        updateNotificationCountDisplay();
         // 发送通知逻辑
         fetch("https://wxpusher.zjiecode.com/api/send/message", {
             method: "POST",
@@ -244,28 +255,30 @@
                 contentType: 1,
                 uids: wxpusherUIDs
             })
-        })
- .then(response => response.json())
+        }) .then(response => response.json())
     .then(data => {
       if (data.code === 1000) {
-        alert("通知已送达，请耐心等待。");
-	document.getElementById("messageInput").value = '';
+        alert("通知已送达，请耐心等待车主。");
+      // 编辑框重置为空白
+        document.getElementById("messageInput").value = '';   
         updateCharCount();
       } else {
         alert("通知发送失败，请输入通知内容。");
-	document.getElementById("messageInput").value = '';
+      // 编辑框重置为空白
+        document.getElementById("messageInput").value = '';   
         updateCharCount();
       }
-    })
-    .catch(error => {
+    }).catch(error => {
       console.error("Error sending notification:", error);
       alert("通知发送出错，请检查网络连接。");
-      document.getElementById("messageInput").value = '';
-      updateCharCount();
+      // 编辑框重置为空白
+        document.getElementById("messageInput").value = '';   
+        updateCharCount();
     });
-        // 检查是否达到显示电话号码的条件
+       // 检查是否达到显示电话号码的条件
         if (notificationCount >= 3) {
-	    document.getElementById("notifyBtn").style.display = "none"; // 达到指定次数后隐藏发送信息按钮
+      alert("今日通知次数已用完，您可以选择一键拨打车主电话。");
+           document.getElementById("notifyBtn").style.display = "none"; // 达到指定次数后隐藏发送信息按钮
             document.getElementById("callBtn").style.display = "block"; // 发送通知后显示拨打电话按钮
         }
     }
@@ -285,7 +298,7 @@
     function closeModal() {
         document.getElementById("callModal").style.display = "none";
     }
-	
+
 // 对浏览器的UserAgent进行正则匹配，不含有微信独有标识的则为其他浏览器
     var useragent = navigator.userAgent;
     if (useragent.match(/MicroMessenger/i) != 'MicroMessenger') {
@@ -306,6 +319,18 @@ document.documentElement.appendChild(iframe);
 window.frames[0].window.alert(name);
 iframe.parentNode.removeChild(iframe);
 }
+
+    // 页面加载完成后执行
+    window.addEventListener("load", function() {
+        // 更新发送次数显示
+        updateNotificationCountDisplay();
+        // 检查是否达到显示电话号码的条件
+        if (notificationCount >= 3) {
+           document.getElementById("notifyBtn").style.display = "none"; // 达到指定次数后隐藏发送信息按钮
+            document.getElementById("callBtn").style.display = "block"; // 发送通知后显示拨打电话按钮
+      alert("今日通知次数已用完，您可以选择一键拨打车主电话。");
+        }
+    });
 </script>
 </body>
 </html>
