@@ -199,18 +199,18 @@
         const message = document.getElementById("messageInput").value;
         const count = message.length;
         document.getElementById("charCount").textContent = `${count}/200字`;
-    };
+    }
 
     // 使用快捷模板
     function useTemplate(template) {
         document.getElementById("messageInput").value = template;
         updateCharCount();
-    };
+    }
 
     // 检查违禁词
     function containsForbiddenWords(message) {
         return forbiddenWords.some(word => message.includes(word));
-    };
+    }
 
     // 发送通知
     function notifyOwner() {
@@ -268,23 +268,23 @@
 	    document.getElementById("notifyBtn").style.display = "none"; // 达到指定次数后隐藏发送信息按钮
             document.getElementById("callBtn").style.display = "block"; // 发送通知后显示拨打电话按钮
         }
-    };
+    }
 
     // 显示电话模态框
     function showCallModal() {
         document.getElementById("callModal").style.display = "block";
         document.getElementById("phoneNumber").textContent = '号码显示已加密'; // 在模态框中显示电话号码
-    };
+    }
 
     // 拨打电话
     function callOwner() {
         window.location.href = `tel:${phone}`;
-    };
+    }
 
     // 关闭模态框
     function closeModal() {
         document.getElementById("callModal").style.display = "none";
-    };
+    }
 	
 // 对浏览器的UserAgent进行正则匹配，不含有微信独有标识的则为其他浏览器
     var useragent = navigator.userAgent;
@@ -295,10 +295,9 @@
         var opened = window.open('about:blank', '_self');
         opened.opener = null;
         opened.close();
-    };
+    }
 
-//隐藏弹窗网址
-(function(){
+//隐藏弹窗网址(function(){
 window.alert = function(name){
 var iframe = document.createElement("IFRAME");
 iframe.style.display="none";
@@ -307,7 +306,6 @@ document.documentElement.appendChild(iframe);
 window.frames[0].window.alert(name);
 iframe.parentNode.removeChild(iframe);
 }
-})();
 </script>
 </body>
 </html>
